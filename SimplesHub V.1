@@ -1,0 +1,460 @@
+local player = game.Players.LocalPlayer
+local screenGui = Instance.new("ScreenGui", player.PlayerGui)
+local xRayEnabled = false
+local originalProperties = {}  -- Table to store original properties of parts
+
+-- Create a table to store UI frames
+local uiFrames = {}
+
+-- Function to store original properties of parts
+local function storeOriginalProperties()
+    originalProperties = {}
+    for _, object in ipairs(workspace:GetDescendants()) do
+        if object:IsA("BasePart") and not object:FindFirstChildOfClass("HumanoidRootPart") then
+            originalProperties[object] = {
+                Transparency = object.Transparency,
+                Material = object.Material
+            }
+        end
+    end
+end
+
+-- Function to restore original properties of parts
+local function restoreOriginalProperties()
+    for object, properties in pairs(originalProperties) do
+        if object:IsA("BasePart") then
+            object.Transparency = properties.Transparency
+            object.Material = properties.Material
+        end
+    end
+end
+
+-- Main Frame (slightly transparent)
+local mainFrame = Instance.new("Frame", screenGui)
+mainFrame.Size = UDim2.new(0, 350, 0, 250)  -- Adjusted size to be smaller
+mainFrame.Position = UDim2.new(0.5, -175, 0.5, -125)
+mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+mainFrame.BackgroundTransparency = 10  -- Slight transparency for the main frame
+mainFrame.BorderSizePixel = 0
+
+-- UICorner for rounded edges
+local mainFrameCorner = Instance.new("UICorner", mainFrame)
+mainFrameCorner.CornerRadius = UDim.new(10, 10)  -- Subtle curvature
+
+-- Title Bar (solid)
+local titleBar = Instance.new("Frame", mainFrame)
+titleBar.Size = UDim2.new(1, 0, 0, 40)  -- Reduced height for the title bar
+titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+titleBar.BackgroundTransparency = 0  -- Solid color
+
+-- UICorner for rounded edges
+local titleBarCorner = Instance.new("UICorner", titleBar)
+titleBarCorner.CornerRadius = UDim.new(0, 5)  -- Subtle curvature
+
+-- Title Text (smaller, positioned to the right near the buttons)
+local titleLabel = Instance.new("TextLabel", titleBar)
+titleLabel.Size = UDim2.new(0, 95, 1, 0)  -- Adjusted size to be smaller
+titleLabel.Position = UDim2.new(1, -158, 0, 0)  -- Positioned closer to the exit/minimize buttons
+titleLabel.Text = "SIMPLESHUB"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextScaled = true
+titleLabel.BackgroundTransparency = 1
+titleLabel.Font = Enum.Font.SourceSansBold
+titleLabel.TextXAlignment = Enum.TextXAlignment.Right  -- Align text to the right
+
+-- Close Button (solid, curvy)
+local closeButton = Instance.new("TextButton", titleBar)
+closeButton.Size = UDim2.new(0, 25, 0, 25)
+closeButton.Position = UDim2.new(1, -30, 0.5, -12)
+closeButton.Text = "X"
+closeButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+closeButton.BackgroundTransparency = 0
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local closeButtonCorner = Instance.new("UICorner", closeButton)
+closeButtonCorner.CornerRadius = UDim.new(0, 8)  -- Increased curvature
+
+closeButton.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
+end)
+
+-- Minimize Button (solid, curvy)
+local minimizeButton = Instance.new("TextButton", titleBar)
+minimizeButton.Size = UDim2.new(0, 25, 0, 25)
+minimizeButton.Position = UDim2.new(1, -60, 0.5, -12)
+minimizeButton.Text = "-"
+minimizeButton.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+minimizeButton.BackgroundTransparency = 0
+minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local minimizeButtonCorner = Instance.new("UICorner", minimizeButton)
+minimizeButtonCorner.CornerRadius = UDim.new(0, 8)  -- Increased curvature
+
+-- Scrolling Frame for Tab Buttons (solid, curvy)
+local tabScrollFrame = Instance.new("ScrollingFrame", titleBar)
+tabScrollFrame.Size = UDim2.new(0, 180, 1, 0)  -- Adjust the width as needed
+tabScrollFrame.Position = UDim2.new(0, 10, 0, 0)
+tabScrollFrame.CanvasSize = UDim2.new(2, 0, 0, 0)  -- Adjusted CanvasSize to prevent vertical scrolling
+tabScrollFrame.ScrollBarThickness = 4
+tabScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+tabScrollFrame.BackgroundTransparency = 1
+tabScrollFrame.ScrollingDirection = Enum.ScrollingDirection.X  -- Restrict scrolling to horizontal
+
+local uiListLayout = Instance.new("UIListLayout", tabScrollFrame)
+uiListLayout.FillDirection = Enum.FillDirection.Horizontal
+uiListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+uiListLayout.Padding = UDim.new(0, 5)
+
+local function createUIBox(name, inputPlaceholder, buttonText, onButtonClick)
+    local frame = Instance.new("Frame", screenGui)
+    frame.Size = UDim2.new(0, 300, 0, 150)
+    frame.Position = UDim2.new(0.5, -150, 0.5, -75)
+    frame.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    frame.BackgroundTransparency = 0.2
+    frame.Visible = false
+
+    local corner = Instance.new("UICorner", frame)
+    corner.CornerRadius = UDim.new(0, 10)
+
+    local titleBar = Instance.new("Frame", frame)
+    titleBar.Size = UDim2.new(1, 0, 0, 30)
+    titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    titleBar.BackgroundTransparency = 0
+
+    local titleLabel = Instance.new("TextLabel", titleBar)
+    titleLabel.Size = UDim2.new(0, 250, 1, 0)
+    titleLabel.Position = UDim2.new(0, 10, 0, 0)
+    titleLabel.Text = name
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextScaled = true
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Font = Enum.Font.SourceSansBold
+
+    local exitButton = Instance.new("TextButton", titleBar)
+    exitButton.Size = UDim2.new(0, 25, 0, 25)
+    exitButton.Position = UDim2.new(1, -30, 0.5, -12)
+    exitButton.Text = "X"
+    exitButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+    exitButton.BackgroundTransparency = 0
+    exitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+    exitButton.MouseButton1Click:Connect(function()
+        frame.Visible = false
+    end)
+
+    local inputBox = Instance.new("TextBox", frame)
+    inputBox.Size = UDim2.new(0, 250, 0, 40)
+    inputBox.Position = UDim2.new(0.5, -125, 0.3, 0)
+    inputBox.PlaceholderText = inputPlaceholder
+    inputBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    inputBox.BackgroundTransparency = 0.2
+    inputBox.TextColor3 = Color3.fromRGB(0, 0, 0)
+    inputBox.TextScaled = true
+    inputBox.ClearTextOnFocus = true
+
+    local applyButton = Instance.new("TextButton", frame)
+    applyButton.Size = UDim2.new(0, 250, 0, 30)
+    applyButton.Position = UDim2.new(0.5, -125, 0.7, 0)
+    applyButton.Text = buttonText
+    applyButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+    applyButton.BackgroundTransparency = 0
+    applyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+    applyButton.MouseButton1Click:Connect(function()
+        onButtonClick(inputBox.Text)
+    end)
+
+    uiFrames[name] = frame
+end
+
+-- Function to toggle the visibility of UI boxes
+local function toggleUIBox(name)
+    local frame = uiFrames[name]
+    if frame then
+        frame.Visible = not frame.Visible
+    end
+end
+
+-- Arsenal Tab Button (solid, curvy)
+local arsenalButton = Instance.new("TextButton", tabScrollFrame)
+arsenalButton.Size = UDim2.new(0, 84, 0, 28)  -- Adjusted size to match original
+arsenalButton.Text = "ARSENAL"
+arsenalButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+arsenalButton.BackgroundTransparency = 0
+arsenalButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local arsenalButtonCorner = Instance.new("UICorner", arsenalButton)
+arsenalButtonCorner.CornerRadius = UDim.new(0, 8)  -- Increased curvature
+
+-- Universal Tab Button (solid, curvy)
+local universalButton = Instance.new("TextButton", tabScrollFrame)
+universalButton.Size = UDim2.new(0, 84, 0, 28)  -- Adjusted size to match original
+universalButton.Text = "UNIVERSAL"
+universalButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+universalButton.BackgroundTransparency = 0
+universalButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local universalButtonCorner = Instance.new("UICorner", universalButton)
+universalButtonCorner.CornerRadius = UDim.new(0, 8)  -- Increased curvature
+
+-- MM2 Tab Button (solid, curvy)
+local mm2Button = Instance.new("TextButton", tabScrollFrame)
+mm2Button.Size = UDim2.new(0, 84, 0, 28)  -- Adjusted size to match original
+mm2Button.Text = "MM2"
+mm2Button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+mm2Button.BackgroundTransparency = 0
+mm2Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local mm2ButtonCorner = Instance.new("UICorner", mm2Button)
+mm2ButtonCorner.CornerRadius = UDim.new(0, 8)  -- Increased curvature
+
+-- Arsenal Frame (slightly transparent background)
+local arsenalFrame = Instance.new("Frame", mainFrame)
+arsenalFrame.Size = UDim2.new(1, 0, 1, -40)
+arsenalFrame.Position = UDim2.new(0, 0, 0, 40)
+arsenalFrame.BackgroundColor3 = Color3.fromRGB(85, 85, 85)
+arsenalFrame.BackgroundTransparency = 0.2  -- Slight transparency for the background
+arsenalFrame.Visible = true
+
+local arsenalFrameCorner = Instance.new("UICorner", arsenalFrame)
+arsenalFrameCorner.CornerRadius = UDim.new(0, 6)
+
+-- Universal Frame (slightly transparent background)
+local universalFrame = Instance.new("Frame", mainFrame)
+universalFrame.Size = UDim2.new(1, 0, 1, -40)
+universalFrame.Position = UDim2.new(0, 0, 0, 40)
+universalFrame.BackgroundColor3 = Color3.fromRGB(85, 85, 85)
+universalFrame.BackgroundTransparency = 0.2  -- Slight transparency for the background
+universalFrame.Visible = false
+
+local universalFrameCorner = Instance.new("UICorner", universalFrame)
+universalFrameCorner.CornerRadius = UDim.new(0, 6)
+
+-- MM2 Frame (slightly transparent background)
+local mm2Frame = Instance.new("Frame", mainFrame)
+mm2Frame.Size = UDim2.new(1, 0, 1, -40)
+mm2Frame.Position = UDim2.new(0, 0, 0, 40)
+mm2Frame.BackgroundColor3 = Color3.fromRGB(85, 85, 85)
+mm2Frame.BackgroundTransparency = 0.2  -- Slight transparency for the background
+mm2Frame.Visible = false
+
+local mm2FrameCorner = Instance.new("UICorner", mm2Frame)
+mm2FrameCorner.CornerRadius = UDim.new(0, 6)
+
+-- Switch Tabs
+arsenalButton.MouseButton1Click:Connect(function()
+    arsenalFrame.Visible = true
+    universalFrame.Visible = false
+    mm2Frame.Visible = false
+end)
+
+universalButton.MouseButton1Click:Connect(function()
+    arsenalFrame.Visible = false
+    universalFrame.Visible = true
+    mm2Frame.Visible = false
+end)
+
+mm2Button.MouseButton1Click:Connect(function()
+    arsenalFrame.Visible = false
+    universalFrame.Visible = false
+    mm2Frame.Visible = true
+end)
+
+-- Create Buttons with original size
+local function createButton(parent, text, position)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0, 80, 0, 37)  -- Reverted to original size
+    button.Position = position
+    button.Text = text
+    button.BackgroundColor3 = Color3.fromRGB(200, 50, 50)  -- Solid color
+    button.BackgroundTransparency = 0
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    
+    local buttonCorner = Instance.new("UICorner", button)
+    buttonCorner.CornerRadius = UDim.new(0, 8)  -- Increased curvature
+
+    button.Parent = parent
+    return button
+end
+
+-- Arsenal Features
+local espButton = createButton(arsenalFrame, "ESP", UDim2.new(0, 10, 0, 10))
+local aimbotButton = createButton(arsenalFrame, "AIMBOT", UDim2.new(0, 100, 0, 10))
+local silentAimButton = createButton(arsenalFrame, "SILENT AIM", UDim2.new(0, 190, 0, 10))
+
+-- Universal Features
+local flyButton = createButton(universalFrame, "FLY", UDim2.new(0, 10, 0, 10))
+local teleportButton = createButton(universalFrame, "TELEPORT", UDim2.new(0, 100, 0, 10))
+local jumpPowerButton = createButton(universalFrame, "JUMPPOWER", UDim2.new(0, 190, 0, 10))
+local walkSpeedButton = createButton(universalFrame, "WALKSPEED", UDim2.new(0, 10, 0, 60))
+local xRayButton = createButton(universalFrame, "XRAY", UDim2.new(0, 100, 0, 60))
+
+-- MM2 Features
+local EsPButton = createButton(mm2Frame, "ESP", UDim2.new(0, 10, 0, 10))
+
+-- Create UI boxes for WalkSpeed, JumpPower, and Teleport
+createUIBox("WalkSpeed", "Enter WalkSpeed", "Apply WalkSpeed", function(value)
+    local speed = tonumber(value)
+    if speed then
+        player.Character.Humanoid.WalkSpeed = speed
+        print("WalkSpeed set to", speed)
+    else
+        print("Invalid WalkSpeed value")
+    end
+end)
+
+createUIBox("JumpPower", "Enter JumpPower", "Apply JumpPower", function(value)
+    local power = tonumber(value)
+    if power then
+        player.Character.Humanoid.JumpPower = power
+        print("JumpPower set to", power)
+    else
+        print("Invalid JumpPower value")
+    end
+end)
+
+createUIBox("Teleport", "Enter Username", "Teleport", function(username)
+    local targetPlayer = game.Players:FindFirstChild(username)
+    if targetPlayer then
+        player.Character.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame
+        print("Teleported to", username)
+    else
+        print("Player not found")
+    end
+end)
+
+-- Flags for features
+local espEnabled = false
+local aimbotEnabled = false
+local silentAimEnabled = false
+local flyEnabled = false
+local teleportEnabled = false
+local jumpPowerEnabled = false
+local walkSpeedEnabled = false
+local xRayEnabled = false
+
+-- Placeholder functions for Arsenal Features
+local function espFunction()
+    espEnabled = not espEnabled
+    print("ESP Feature", espEnabled and "activated" or "deactivated")
+    -- Add functionality here
+end
+
+local function aimbotFunction()
+    aimbotEnabled = not aimbotEnabled
+    print("Aimbot Feature", aimbotEnabled and "activated" or "deactivated")
+    -- Add functionality here
+end
+
+local function silentAimFunction()
+    silentAimEnabled = not silentAimEnabled
+    print("Silent Aim Feature", silentAimEnabled and "activated" or "deactivated")
+    -- Add functionality here
+end
+
+-- Placeholder functions for Universal Features
+local function flyFunction()
+    flyEnabled = not flyEnabled
+    print("Fly Feature", flyEnabled and "activated" or "deactivated")
+    -- Add functionality here
+end
+
+local function teleportFunction()
+    teleportEnabled = not teleportEnabled
+    print("Teleport Feature", teleportEnabled and "activated" or "deactivated")
+    -- Add functionality here
+end
+
+local function jumpPowerFunction()
+    jumpPowerEnabled = not jumpPowerEnabled
+    print("Jump Power Feature", jumpPowerEnabled and "activated" or "deactivated")
+    -- Add functionality here
+end
+
+local function walkSpeedFunction()
+    walkSpeedEnabled = not walkSpeedEnabled
+    print("Walk Speed Feature", walkSpeedEnabled and "activated" or "deactivated")
+    -- Add functionality here
+end
+
+local function toggleXray()
+    XrayEnabled = not XrayEnabled
+    local transparency = XrayEnabled and 0.25 or 0  -- Set transparency to 0.25 if enabled, otherwise 0
+
+    if XrayEnabled then
+        -- Store original properties before changing them
+        storeOriginalProperties()
+
+        -- Apply X-ray effect
+        for _, object in ipairs(workspace:GetDescendants()) do
+            if object:IsA("BasePart") and not object:FindFirstChildOfClass("HumanoidRootPart") then
+                object.Material = Enum.Material.SmoothPlastic  -- Optional: make parts look better with transparency
+                object.Transparency = transparency
+            end
+        end
+    else
+        -- Restore original properties
+        restoreOriginalProperties()
+    end
+
+    print("X-ray feature", xRayEnabled and "activated" or "deactivated")
+end
+
+-- Connect placeholder functions to buttons
+espButton.MouseButton1Click:Connect(espFunction)
+aimbotButton.MouseButton1Click:Connect(aimbotFunction)
+silentAimButton.MouseButton1Click:Connect(silentAimFunction)
+
+flyButton.MouseButton1Click:Connect(flyFunction)
+teleportButton.MouseButton1Click:Connect(teleportFunction)
+xRayButton.MouseButton1Click:Connect(toggleXray)
+
+-- Connect buttons to toggle the UI boxes
+walkSpeedButton.MouseButton1Click:Connect(function()
+    toggleUIBox("WalkSpeed")
+end)
+
+jumpPowerButton.MouseButton1Click:Connect(function()
+    toggleUIBox("JumpPower")
+end)
+
+teleportButton.MouseButton1Click:Connect(function()
+    toggleUIBox("Teleport")
+end)
+
+-- Draggable Functionality for Main Frame (Title Bar)
+local dragging
+local dragInput
+local dragStart
+local startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+titleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if dragging and input == dragInput then
+        update(input)
+    end
+end)
