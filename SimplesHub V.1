@@ -2,6 +2,7 @@ local player = game.Players.LocalPlayer
 local screenGui = Instance.new("ScreenGui", player.PlayerGui)
 local xRayEnabled = false
 local originalProperties = {}  -- Table to store original properties of parts
+local UserInputService = game:GetService("UserInputService")
 
 -- Create a table to store UI frames
 local uiFrames = {}
@@ -278,9 +279,9 @@ local function createButton(parent, text, position)
 end
 
 -- Arsenal Features
-local espButton = createButton(arsenalFrame, "ESP", UDim2.new(0, 10, 0, 10))
-local aimbotButton = createButton(arsenalFrame, "AIMBOT", UDim2.new(0, 100, 0, 10))
-local silentAimButton = createButton(arsenalFrame, "SILENT AIM", UDim2.new(0, 190, 0, 10))
+local arsenalespButton = createButton(arsenalFrame, "ESP", UDim2.new(0, 10, 0, 10))
+local arsenalaimbotButton = createButton(arsenalFrame, "AIMBOT", UDim2.new(0, 100, 0, 10))
+local arsenalsilentAimButton = createButton(arsenalFrame, "SILENT AIM", UDim2.new(0, 190, 0, 10))
 
 -- Universal Features
 local flyButton = createButton(universalFrame, "FLY", UDim2.new(0, 10, 0, 10))
@@ -323,10 +324,167 @@ createUIBox("Teleport", "Enter Username", "Teleport", function(username)
     end
 end)
 
--- Flags for features
-local espEnabled = false
+-- Arsenal Aimbot UI
+-- Services
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+-- Variables
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
 local aimbotEnabled = false
-local silentAimEnabled = false
+local aimbotUIScreen
+
+-- Function to create and display the aimbot UI
+local function createarsenalAimbotUI()
+    -- Avoid creating multiple instances
+    if aimbotUIScreen then return end
+
+    aimbotUIScreen = Instance.new("ScreenGui")
+    aimbotUIScreen.Name = "arsenalaimbotUIScreen"
+    aimbotUIScreen.Parent = player:WaitForChild("PlayerGui")
+
+    local arsenalaimbotMainFrame = Instance.new("Frame")
+    arsenalaimbotMainFrame.Size = UDim2.new(0, 200, 0, 250)
+    arsenalaimbotMainFrame.Position = UDim2.new(0.5, -100, 0.5, -125)
+    arsenalaimbotMainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    arsenalaimbotMainFrame.BackgroundTransparency = 0.3 -- Slightly transparent
+    arsenalaimbotMainFrame.Parent = aimbotUIScreen
+
+    local arsenalaimbotTopBar = Instance.new("TextLabel")
+    arsenalaimbotTopBar.Size = UDim2.new(1, 0, 0, 30)
+    arsenalaimbotTopBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    arsenalaimbotTopBar.Text = "SimplesHub"
+    arsenalaimbotTopBar.TextColor3 = Color3.fromRGB(255, 255, 255)
+    arsenalaimbotTopBar.Font = Enum.Font.SourceSansBold
+    arsenalaimbotTopBar.TextSize = 18
+    arsenalaimbotTopBar.Parent = arsenalaimbotMainFrame
+
+    local arsenalaimbotExitButton = Instance.new("TextButton")
+    arsenalaimbotExitButton.Size = UDim2.new(0, 20, 0, 20)
+    arsenalaimbotExitButton.Position = UDim2.new(0, 5, 0, 5)
+    arsenalaimbotExitButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    arsenalaimbotExitButton.Text = "X"
+    arsenalaimbotExitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    arsenalaimbotExitButton.Font = Enum.Font.SourceSansBold
+    arsenalaimbotExitButton.TextSize = 14
+    arsenalaimbotExitButton.Parent = arsenalaimbotMainFrame
+
+    local arsenalaimbotLabel = Instance.new("TextLabel")
+    arsenalaimbotLabel.Size = UDim2.new(1, 0, 0, 50)
+    arsenalaimbotLabel.Position = UDim2.new(0, 0, 0, 40)
+    arsenalaimbotLabel.BackgroundTransparency = 1
+    arsenalaimbotLabel.Text = "Click E to toggle Aimbot."
+    arsenalaimbotLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    arsenalaimbotLabel.Font = Enum.Font.SourceSans
+    arsenalaimbotLabel.TextSize = 16
+    arsenalaimbotLabel.Parent = arsenalaimbotMainFrame
+
+    local arsenalaimbotText = Instance.new("TextLabel")
+    arsenalaimbotText.Size = UDim2.new(1, 0, 0, 50)
+    arsenalaimbotText.Position = UDim2.new(0, 0, 0, 90)
+    arsenalaimbotText.BackgroundTransparency = 1
+    arsenalaimbotText.Text = "Aimbot"
+    arsenalaimbotText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    arsenalaimbotText.Font = Enum.Font.SourceSansBold
+    arsenalaimbotText.TextSize = 24
+    arsenalaimbotText.Parent = arsenalaimbotMainFrame
+
+    local arsenalaimbotEnableButton = Instance.new("TextButton")
+    arsenalaimbotEnableButton.Size = UDim2.new(1, -20, 0, 40)
+    arsenalaimbotEnableButton.Position = UDim2.new(0, 10, 1, -50)
+    arsenalaimbotEnableButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+    arsenalaimbotEnableButton.Text = "Enable"
+    arsenalaimbotEnableButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+    arsenalaimbotEnableButton.Font = Enum.Font.SourceSansBold
+    arsenalaimbotEnableButton.TextSize = 18
+    arsenalaimbotEnableButton.Parent = arsenalaimbotMainFrame
+
+    local function getClosestPlayer()
+        local closestPlayer = nil
+        local shortestDistance = math.huge
+
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= player and v.Team ~= player.Team and v.Character and v.Character:FindFirstChild("Head") then
+                local headPos = v.Character.Head.Position
+                local screenPoint = workspace.CurrentCamera:WorldToScreenPoint(headPos)
+                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(mouse.X, mouse.Y)).magnitude
+
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPlayer = v
+                end
+            end
+        end
+
+        return closestPlayer
+    end
+
+    local function toggleAimbot()
+        aimbotEnabled = not aimbotEnabled
+        if aimbotEnabled then
+            arsenalaimbotEnableButton.Text = "Disable"
+        else
+            arsenalaimbotEnableButton.Text = "Enable"
+        end
+    end
+
+    arsenalaimbotEnableButton.MouseButton1Click:Connect(toggleAimbot)
+
+    arsenalaimbotExitButton.MouseButton1Click:Connect(function()
+        aimbotUIScreen:Destroy()
+        aimbotUIScreen = nil
+    end)
+
+    RunService.RenderStepped:Connect(function()
+        if aimbotEnabled then
+            local target = getClosestPlayer()
+            if target and target.Character and target.Character:FindFirstChild("Head") then
+                workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, target.Character.Head.Position)
+            end
+        end
+    end)
+
+    UserInputService.InputBegan:Connect(function(input)
+        if input.KeyCode == Enum.KeyCode.E then
+            toggleAimbot()
+        end
+    end)
+
+    -- Draggable UI logic
+    local dragging
+    local dragInput, dragStart, startPos
+
+    local function update(input)
+        local delta = input.Position - dragStart
+        arsenalaimbotMainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+
+    arsenalaimbotMainFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = arsenalaimbotMainFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            update(input)
+        end
+    end)
+end
+
+-- Flags for features
+local arsenalespEnabled = false
+local arsenalaimbotEnabled = false
+local arsenalsilentAimEnabled = false
 local flyEnabled = false
 local teleportEnabled = false
 local jumpPowerEnabled = false
@@ -334,21 +492,24 @@ local walkSpeedEnabled = false
 local xRayEnabled = false
 
 -- Placeholder functions for Arsenal Features
-local function espFunction()
-    espEnabled = not espEnabled
-    print("ESP Feature", espEnabled and "activated" or "deactivated")
+local function arsenalespFunction()
+    arsenalespEnabled = not arsenalespEnabled
+    print("ESP Feature", arsenalespEnabled and "activated" or "deactivated")
     -- Add functionality here
 end
 
-local function aimbotFunction()
-    aimbotEnabled = not aimbotEnabled
-    print("Aimbot Feature", aimbotEnabled and "activated" or "deactivated")
-    -- Add functionality here
+local function arsenalaimbotFunction()
+    if not arsenalaimbotUIScreen.Parent then
+        createarsenalAimbotUI()
+    end
+    -- Toggle Aimbot Functionality
+    arsenalaimbotEnabled = not arsenalaimbotEnabled
+    print("Aimbot Feature", arsenalaimbotEnabled and "activated" or "deactivated")
 end
 
-local function silentAimFunction()
-    silentAimEnabled = not silentAimEnabled
-    print("Silent Aim Feature", silentAimEnabled and "activated" or "deactivated")
+local function arsenalsilentAimFunction()
+    arsenalsilentAimEnabled = not arsenalsilentAimEnabled
+    print("Silent Aim Feature", arsenalsilentAimEnabled and "activated" or "deactivated")
     -- Add functionality here
 end
 
@@ -401,9 +562,9 @@ local function toggleXray()
 end
 
 -- Connect placeholder functions to buttons
-espButton.MouseButton1Click:Connect(espFunction)
-aimbotButton.MouseButton1Click:Connect(aimbotFunction)
-silentAimButton.MouseButton1Click:Connect(silentAimFunction)
+arsenalespButton.MouseButton1Click:Connect(arsenalespFunction)
+arsenalaimbotButton.MouseButton1Click:Connect(createarsenalAimbotUI)
+arsenalsilentAimButton.MouseButton1Click:Connect(arsenalsilentAimFunction)
 
 flyButton.MouseButton1Click:Connect(flyFunction)
 teleportButton.MouseButton1Click:Connect(teleportFunction)
